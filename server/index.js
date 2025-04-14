@@ -18,11 +18,12 @@ app.use(cors());
 
 app.get('/movie/', async (req, res) => {
   const movie = await fetchNthMovie(daysPassedSince("2025-04-12") + 1);
+  const daysPassed = daysPassedSince("2025-04-12") + 1;
 
   if (!movie) {
     return res.status(404).json({ error: 'Movie not found' });
   }
-  res.json(movie);
+  res.json({movie, daysPassed});
 });
 
 

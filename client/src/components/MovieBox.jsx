@@ -15,7 +15,9 @@ function MovieBox() {
   const [gameStatus, setGameStatus] = useState("playing"); // 'playing' | 'won' | 'lost'
   const [feedback, setFeedback] = useState("");
   const [guesses, setGuesses] = useState([]);
+  const [day, setDay] = useState(0);
   const apiURL = import.meta.env.VITE_API_URL;
+  const CURRENT_VERSION = '2';
 
   const getEETDateString = () => {
     const now = new Date();
@@ -25,9 +27,20 @@ function MovieBox() {
     return eetTime.toISOString().split("T")[0];
   };
 
+  const copyShareText = () => {
+    const shareText = `MovieGuesser #${day} - ${amountTries}/5\n${guesses.map((guess, idx) =>guess === movie.title ? `🟩` : `🟥`).join("")}\n${window.location.href}`;
+    navigator.clipboard.writeText(shareText);
+  }
+
   const storageKey = `movieGame_${getEETDateString()}`;
 
   useEffect(() => {
+    const storedVersion = localStorage.getItem('dataVersion');
+
+  if (storedVersion !== CURRENT_VERSION) {
+    localStorage.clear(); // Or selectively clear only outdated keys
+    localStorage.setItem('dataVersion', CURRENT_VERSION);
+  }
     const savedData = JSON.parse(localStorage.getItem(storageKey));
 
     // Check if saved data is from today
@@ -42,6 +55,7 @@ function MovieBox() {
       setGuesses(savedData.guesses);
       setGameStatus(savedData.gameStatus);
       setIsLoading(false);
+      setDay(savedData.day);
       return;
     }
 
@@ -56,20 +70,21 @@ function MovieBox() {
     fetch(`${apiURL}/movie/`)
       .then((response) => response.json())
       .then((data) => {
-        const year = parseInt(data.release_date?.slice(0, 4)) || 0;
+        const year = parseInt(data.movie.release_date?.slice(0, 4)) || 0;
         const state = {
-          movie: data,
-          jsonGenres: data.genres || [],
-          jsonCast: data.cast || [],
+          movie: data.movie,
+          jsonGenres: data.movie.genres || [],
+          jsonCast: data.movie.cast || [],
           releaseYear: year,
           amountTries: 0,
+          day: data.daysPassed,
           guesses: [],
           gameStatus: "playing",
         };
-
-        setMovie(data);
-        setJsonGenres(data.genres || []);
-        setJsonCast(data.cast || []);
+        setDay(data.daysPassed);
+        setMovie(data.movie);
+        setJsonGenres(data.movie.genres || []);
+        setJsonCast(data.movie.cast || []);
         setReleaseYear(year);
         localStorage.setItem(storageKey, JSON.stringify(state));
         setIsLoading(false);
@@ -132,6 +147,7 @@ function MovieBox() {
         amountTries: updated.amountTries,
         guesses: updated.guesses,
         gameStatus: updated.gameStatus,
+        day,
       })
     );
   };
@@ -188,7 +204,7 @@ function MovieBox() {
           ) : (
             <>
               😢 The correct answer was{" "}
-              <span className="underline text-white">"{movie.title}"</span>
+              <span className="text-white">"{movie.title}"</span>
             </>
           )}
         </div>
@@ -212,6 +228,12 @@ function MovieBox() {
               </li>
             ))}
           </ul>
+          <div className="flex flex-col items-center mt-4">
+          <button type="button" onClick={() => copyShareText()} class="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">
+            SHARE
+          </button>
+          </div>
+          
         </div>
 
         <p className="text-gray-300 text-sm mt-4">
