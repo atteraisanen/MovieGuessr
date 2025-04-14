@@ -7,17 +7,17 @@ function MovieBox() {
   const [jsonGenres, setJsonGenres] = useState([]);
   const [jsonCast, setJsonCast] = useState([]);
   const [releaseYear, setReleaseYear] = useState(0);
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
 
   const [input, setInput] = useState("");
   const [results, setResults] = useState([]);
   const [amountTries, setAmountTries] = useState(0);
-  const [gameStatus, setGameStatus] = useState("playing"); // 'playing' | 'won' | 'lost'
+  const [gameStatus, setGameStatus] = useState("playing");
   const [feedback, setFeedback] = useState("");
   const [guesses, setGuesses] = useState([]);
   const [day, setDay] = useState(0);
   const apiURL = import.meta.env.VITE_API_URL;
-  const CURRENT_VERSION = '2';
+  const CURRENT_VERSION = "2";
 
   const getEETDateString = () => {
     const now = new Date();
@@ -28,24 +28,25 @@ function MovieBox() {
   };
 
   const copyShareText = () => {
-    const shareText = `MovieGuesser #${day} - ${amountTries}/5\n${guesses.map((guess, idx) =>guess === movie.title ? `🟩` : `🟥`).join("")}\n${window.location.href}`;
+    const shareText = `MovieGuesser #${day} - ${amountTries}/5\n${guesses
+      .map((guess, idx) => (guess === movie.title ? `🟩` : `🟥`))
+      .join("")}\n${window.location.href}`;
     navigator.clipboard.writeText(shareText);
-  }
+  };
 
   const storageKey = `movieGame_${getEETDateString()}`;
 
   useEffect(() => {
-    const storedVersion = localStorage.getItem('dataVersion');
-
-  if (storedVersion !== CURRENT_VERSION) {
-    localStorage.clear(); // Or selectively clear only outdated keys
-    localStorage.setItem('dataVersion', CURRENT_VERSION);
-  }
+    const storedVersion = localStorage.getItem("dataVersion");
+  
+    if (storedVersion !== CURRENT_VERSION) {
+      localStorage.clear();
+      localStorage.setItem("dataVersion", CURRENT_VERSION);
+    }
+  
     const savedData = JSON.parse(localStorage.getItem(storageKey));
-
-    // Check if saved data is from today
     const isTodayData = savedData && storageKey.includes(getEETDateString());
-
+  
     if (isTodayData) {
       setMovie(savedData.movie);
       setJsonGenres(savedData.jsonGenres);
@@ -54,53 +55,78 @@ function MovieBox() {
       setAmountTries(savedData.amountTries);
       setGuesses(savedData.guesses);
       setGameStatus(savedData.gameStatus);
-      setIsLoading(false);
       setDay(savedData.day);
+      setIsLoading(false);
       return;
     }
-
-    // Clear any old data from previous days
-    Object.keys(localStorage).forEach(key => {
+  
+    Object.keys(localStorage).forEach((key) => {
       if (key.startsWith("movieGame_") && !key.includes(getEETDateString())) {
         localStorage.removeItem(key);
       }
     });
-
-    setIsLoading(true);
-    fetch(`${apiURL}/movie/`)
-      .then((response) => response.json())
-      .then((data) => {
-        const year = parseInt(data.movie.release_date?.slice(0, 4)) || 0;
-        const state = {
-          movie: data.movie,
-          jsonGenres: data.movie.genres || [],
-          jsonCast: data.movie.cast || [],
-          releaseYear: year,
-          amountTries: 0,
-          day: data.daysPassed,
-          guesses: [],
-          gameStatus: "playing",
-        };
-        setDay(data.daysPassed);
-        setMovie(data.movie);
-        setJsonGenres(data.movie.genres || []);
-        setJsonCast(data.movie.cast || []);
-        setReleaseYear(year);
-        localStorage.setItem(storageKey, JSON.stringify(state));
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching movie:", err);
-        setIsLoading(false);
-      });
+  
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 2000;
+  
+    let attempt = 0;
+  
+    const fetchData = () => {
+      setIsLoading(true);
+      fetch(`${apiURL}/movie/`)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const year = parseInt(data.movie.release_date?.slice(0, 4)) || 0;
+          const state = {
+            movie: data.movie,
+            jsonGenres: data.movie.genres || [],
+            jsonCast: data.movie.cast || [],
+            releaseYear: year,
+            amountTries: 0,
+            day: data.daysPassed,
+            guesses: [],
+            gameStatus: "playing",
+          };
+  
+          setDay(data.daysPassed);
+          setMovie(data.movie);
+          setJsonGenres(data.movie.genres || []);
+          setJsonCast(data.movie.cast || []);
+          setReleaseYear(year);
+          localStorage.setItem(storageKey, JSON.stringify(state));
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error(`Fetch attempt ${attempt + 1} failed:`, err);
+          if (attempt < MAX_RETRIES - 1) {
+            attempt++;
+            setTimeout(fetchData, RETRY_DELAY * Math.pow(2, attempt));
+          } else {
+            console.error("All fetch attempts failed.");
+            setIsLoading(false);
+          }
+        });
+    };
+  
+    fetchData();
   }, []);
+  
 
   // Loading screen
   if (isLoading) {
     return (
       <div className="max-w-2xl mx-auto text-center mt-20 px-6">
-        <h1 className="text-4xl font-bold mb-6 text-white">🎬 Guess the Movie</h1>
-        <div className="text-xl text-purple-300 mb-4">Loading today's movie...</div>
+        <h1 className="text-4xl font-bold mb-6 text-white">
+          🎬 Guess the Movie
+        </h1>
+        <div className="text-xl text-purple-300 mb-4">
+          Loading today's movie...
+        </div>
         <div className="animate-pulse text-gray-400">Please wait</div>
       </div>
     );
@@ -169,7 +195,10 @@ function MovieBox() {
       {amountTries > 2 && (
         <p>
           🧑‍🎤 <span className="font-semibold text-white">Main Cast:</span>{" "}
-          {jsonCast.slice(0, 5).map((c) => c.name).join(", ")}
+          {jsonCast
+            .slice(0, 5)
+            .map((c) => c.name)
+            .join(", ")}
         </p>
       )}
       {amountTries > 3 && (
@@ -229,11 +258,14 @@ function MovieBox() {
             ))}
           </ul>
           <div className="flex flex-col items-center mt-4">
-          <button type="button" onClick={() => copyShareText()} class="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">
-            SHARE
-          </button>
+            <button
+              type="button"
+              onClick={() => copyShareText()}
+              class="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+            >
+              SHARE
+            </button>
           </div>
-          
         </div>
 
         <p className="text-gray-300 text-sm mt-4">

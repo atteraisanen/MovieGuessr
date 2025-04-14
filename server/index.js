@@ -73,7 +73,6 @@ function daysPassedSince(dateString, timeZone = 'EET') {
       const collection = database.collection("moviedata");
       
       const movie = await collection.find().sort({ _id: 1 }).skip(n - 1).limit(1).toArray();
-      console.log(movie[0].tagline);
       
       return movie[0];
     } catch (error) {
