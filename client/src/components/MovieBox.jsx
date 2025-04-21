@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SearchBar } from "./SearchBar";
 import { SearchResults } from "./SearchResults";
 
-function MovieBox() {
+function MovieBox(props) {
   const [movie, setMovie] = useState({});
   const [jsonGenres, setJsonGenres] = useState([]);
   const [jsonCast, setJsonCast] = useState([]);
@@ -27,11 +27,15 @@ function MovieBox() {
     return eetTime.toISOString().split("T")[0];
   };
 
-  const copyShareText = () => {
+  const copyShareText = (setIsOpen) => {
+    setIsOpen(true);
     const shareText = `MovieGuesser #${day} - ${amountTries}/5\n${guesses
       .map((guess, idx) => (guess === movie.title ? `🟩` : `🟥`))
       .join("")}\n${window.location.href}`;
     navigator.clipboard.writeText(shareText);
+    setTimeout(() => {
+      setIsOpen(false);
+    }, 500);
   };
 
   const storageKey = `movieGame_${getEETDateString()}`;
@@ -260,8 +264,8 @@ function MovieBox() {
           <div className="flex flex-col items-center mt-4">
             <button
               type="button"
-              onClick={() => copyShareText()}
-              class="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
+              onClick={() => copyShareText(props.setIsOpen)}
+              class="focus:outline-none cursor-pointer text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
             >
               SHARE
             </button>

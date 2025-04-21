@@ -8,6 +8,9 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 
+client.connect()
+  .then(() => console.log("MongoDB connected successfully"));
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
